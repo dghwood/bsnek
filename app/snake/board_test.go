@@ -53,3 +53,33 @@ func TestBoardSnake(t *testing.T) {
 		t.Fatalf("Square 1, 1 HasSnakeFor != 2, equals: %d", board.GetSquare(1, 1).HasSnakeFor)
 	}
 }
+
+func TestBoardHazard(t *testing.T) {
+	state := models.GameState{
+		Game: models.Game{
+			Ruleset: models.Ruleset{
+				Settings: models.RulesetSettings{
+					HazardDamagePerTurn: 3,
+				},
+			},
+		},
+		Board: models.Board{
+			Width:  11,
+			Height: 11,
+			Hazards: []models.Coord{
+				{X: 1, Y: 1},
+				{X: 2, Y: 2},
+			},
+		},
+	}
+	board := Board{}
+	board.Init(state)
+	if board.GetSquare(1, 1).HealthDeduction != 3 {
+		t.Fatalf("Square 1,1 health deduction is not 3: equals: %d",
+			board.GetSquare(1, 1).HealthDeduction)
+	}
+	if board.GetSquare(10, 10).HealthDeduction != 0 {
+		t.Fatalf("Square 10, 10 health deduction is not 0: equals %d",
+			board.GetSquare(10, 10).HealthDeduction)
+	}
+}
