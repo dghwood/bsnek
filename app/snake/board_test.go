@@ -19,10 +19,10 @@ func TestBoardFood(t *testing.T) {
 	}
 	board := Board{}
 	board.Init(state)
-	if !board.GetSquare(1, 1).HasFood {
+	if !board.GetSquareFromXY(1, 1).HasFood {
 		t.Fatalf("Square 1,1 does not have food")
 	}
-	if !board.GetSquare(9, 7).HasFood {
+	if !board.GetSquareFromXY(9, 7).HasFood {
 		t.Fatalf("Square 9, 7 does not have food")
 	}
 }
@@ -43,14 +43,14 @@ func TestBoardSnake(t *testing.T) {
 	}
 	board := Board{}
 	board.Init(state)
-	if !board.GetSquare(1, 1).HasSnake {
+	if !board.GetSquareFromXY(1, 1).HasSnake {
 		t.Fatalf("Square 1,1 does not have a snake")
 	}
-	if !board.GetSquare(1, 2).HasSnake {
+	if !board.GetSquareFromXY(1, 2).HasSnake {
 		t.Fatalf("Square 9, 7 does not have a snake")
 	}
-	if board.GetSquare(1, 1).HasSnakeFor != 2 {
-		t.Fatalf("Square 1, 1 HasSnakeFor != 2, equals: %d", board.GetSquare(1, 1).HasSnakeFor)
+	if board.GetSquareFromXY(1, 1).HasSnakeFor != 2 {
+		t.Fatalf("Square 1, 1 HasSnakeFor != 2, equals: %d", board.GetSquareFromXY(1, 1).HasSnakeFor)
 	}
 }
 
@@ -74,12 +74,12 @@ func TestBoardHazard(t *testing.T) {
 	}
 	board := Board{}
 	board.Init(state)
-	if board.GetSquare(1, 1).HealthDeduction != 3 {
+	if board.GetSquareFromXY(1, 1).HealthDeduction != 3 {
 		t.Fatalf("Square 1,1 health deduction is not 3: equals: %d",
-			board.GetSquare(1, 1).HealthDeduction)
+			board.GetSquareFromXY(1, 1).HealthDeduction)
 	}
-	if board.GetSquare(10, 10).HealthDeduction != 0 {
+	if board.GetSquareFromXY(10, 10).HealthDeduction != 0 {
 		t.Fatalf("Square 10, 10 health deduction is not 0: equals %d",
-			board.GetSquare(10, 10).HealthDeduction)
+			board.GetSquareFromXY(10, 10).HealthDeduction)
 	}
 }

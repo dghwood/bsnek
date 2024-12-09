@@ -8,6 +8,15 @@ type Coord struct {
 	Y int `json:"y"`
 }
 
+// Extending the Coord model
+func (c Coord) Add(d Coord) Coord {
+	return Coord{c.X + d.X, c.Y + d.Y}
+}
+
+func (c Coord) Minus(d Coord) Coord {
+	return Coord{c.X - d.X, c.Y - d.Y}
+}
+
 type Battlesnake struct {
 	ID             string         `json:"id"`
 	Name           string         `json:"name"`

@@ -7,18 +7,31 @@ type Square struct {
 	HasSnake        bool
 	HasSnakeFor     int
 	HealthDeduction int
+	isError         bool
+}
+
+func (sq Square) isBlocked() bool {
+	return (sq.HasSnake || sq.isError)
 }
 
 type Board struct {
 	// X, Y indexed
-	board [][]Square
+	board  [][]Square
+	Height int
+	Width  int
+}
+
+func (b *Board) InitEmpty(width int, height int) {
+	b.board = make([][]Square, width)
+	for i := 0; i < width; i++ {
+		b.board[i] = make([]Square, height)
+	}
+	b.Height = height
+	b.Width = width
 }
 
 func (b *Board) Init(state models.GameState) {
-	b.board = make([][]Square, state.Board.Width)
-	for i := 0; i < state.Board.Width; i++ {
-		b.board[i] = make([]Square, state.Board.Height)
-	}
+	b.InitEmpty(state.Board.Width, state.Board.Height)
 
 	// Add Snakes
 	for _, snake := range state.Board.Snakes {
@@ -39,6 +52,13 @@ func (b *Board) Init(state models.GameState) {
 	}
 }
 
-func (b *Board) GetSquare(x int, y int) Square {
+func (b *Board) GetSquareFromXY(x int, y int) Square {
 	return b.board[x][y]
+}
+
+func (b *Board) GetSquare(coord models.Coord) Square {
+	if coord.X < 0 || coord.Y < 0 || coord.X >= b.Width || coord.Y >= b.Height {
+		return Square{isError: true}
+	}
+	return b.board[coord.X][coord.Y]
 }
