@@ -17,6 +17,10 @@ func (c Coord) Minus(d Coord) Coord {
 	return Coord{c.X - d.X, c.Y - d.Y}
 }
 
+func (c Coord) Equal(d Coord) bool {
+	return c.X == d.X && c.Y == d.Y
+}
+
 type Battlesnake struct {
 	ID             string         `json:"id"`
 	Name           string         `json:"name"`
