@@ -6,89 +6,61 @@ This is basically a game engine for BattleSnake
 */
 
 import (
+	"fmt"
+	"math/rand"
+
 	"github.com/dghwood/bsnek/models"
+	"github.com/dghwood/bsnek/permutations"
 )
 
-type Snake struct {
-	Body   []models.Coord
-	Health int
-	Died   bool
-}
-
-func (s *Snake) GetHead() models.Coord {
-	return s.Body[0]
-}
-func (s *Snake) GetDirections() [4]models.Coord {
-	moves := [4]models.Coord{}
-	head := s.GetHead()
-	for i, direction := range Directions {
-		moves[i] = head.Add(direction)
-	}
-	return moves
-}
-
-func (s *Snake) Move(move models.Coord) {
-	s.Body = append([]models.Coord{move}, s.Body[:len(s.Body)-1]...)
-}
-
-func (s *Snake) Eat() {
-	s.Body = append(s.Body, s.Body[len(s.Body)-1])
-}
-
-type Square struct {
-	HasFood         bool
-	isBlocked       bool
-	HealthDeduction int
-}
-
-type GameBoard struct {
-	board [11][11]Square
-}
-
-func (b *GameBoard) GetSquare(coord models.Coord) *Square {
-	if coord.X < 0 || coord.Y < 0 || coord.X > 10 || coord.Y > 10 {
-		return &Square{isBlocked: true}
-	}
-	return &b.board[coord.X][coord.Y]
+var Directions = [4]models.Coord{
+	{X: 0, Y: 1},  // up
+	{X: 0, Y: -1}, // down
+	{X: -1, Y: 0}, // left
+	{X: 1, Y: 0},  // right
 }
 
 type GameEngine struct {
-	Board  GameBoard
-	Snakes []Snake
+	Board    GameBoard
+	Snakes   []Snake
+	Moves    []models.Coord
+	MoveNum  int
+	YouIndex int
 }
 
-func (g *GameEngine) HandleHead2HeadCollision(snake1, snake2 *Snake) {
-	// Note: this might get called multiple times for numerous H2H collisions
-	// in the same spot.
-	// snake1 := &g.Snakes[i]
-	// snake2 := &g.Snakes[j]
-	cond := len(snake1.Body) - len(snake2.Body)
-	if cond > 0 {
-		// snake1 bigger
-		snake2.Died = true
-	} else if cond < 0 {
-		// snake2 bidder
-		snake1.Died = true
-	} else if cond == 0 {
-		// both die
-		snake1.Died = true
-		snake2.Died = true
+func (g *GameEngine) copySnakes() []Snake {
+	snakes := make([]Snake, len(g.Snakes))
+	for i := 0; i < len(g.Snakes); i++ {
+		snakes[i] = g.Snakes[i].Copy()
+	}
+	return snakes
+}
+
+func (g *GameEngine) Copy() GameEngine {
+	return GameEngine{
+		Board:   g.Board.Copy(),
+		Snakes:  g.copySnakes(),
+		Moves:   append([]models.Coord{}, g.Moves...),
+		MoveNum: g.MoveNum,
 	}
 }
 
 func (g *GameEngine) Init(state models.GameState) {
-	// b.InitEmpty(state.Board.Width, state.Board.Height)
-
 	// Add Snakes
 	g.Snakes = make([]Snake, len(state.Board.Snakes))
 	for i, snake := range state.Board.Snakes {
 		g.Snakes[i] = Snake{
 			Body:   snake.Body,
 			Health: snake.Health,
+			Index:  i,
 		}
 		for _, coord := range snake.Body[:len(snake.Body)-1] {
 			// Don't add the tail
 			g.Board.GetSquare(coord).isBlocked = true
+		}
+		// Find your index
+		if state.You.ID == snake.ID {
+			g.YouIndex = i
 		}
 	}
 
@@ -103,9 +75,28 @@ func (g *GameEngine) Init(state models.GameState) {
 	}
 }
 
+func (g *GameEngine) handleHead2HeadCollision(snake1, snake2 *Snake) {
+	// Note: this might get called multiple times for numerous H2H collisions
+	// in the same spot.
+	cond := len(snake1.Body) - len(snake2.Body)
+	if cond > 0 {
+		// snake1 bigger
+		snake2.Died = true
+	} else if cond < 0 {
+		// snake2 bidder
+		snake1.Died = true
+	} else if cond == 0 {
+		// both die
+		snake1.Died = true
+		snake2.Died = true
+	}
+}
+
 func (g *GameEngine) PlayScenario(moves []models.Coord) {
 	// FYI: Moves are indexed by snake
+	g.MoveNum += 1
 
+	aliveSnakes := 0
 	for i := 0; i < len(moves); i++ {
 		move1 := moves[i]
 		snake := &g.Snakes[i]
@@ -115,7 +106,7 @@ func (g *GameEngine) PlayScenario(moves []models.Coord) {
 			move2 := moves[j]
 			if move1.Equal(move2) {
 				// If the snake is dead you can probably skip
-				g.HandleHead2HeadCollision(snake, &g.Snakes[j])
+				g.handleHead2HeadCollision(snake, &g.Snakes[j])
 			}
 		}
 
@@ -139,28 +130,116 @@ func (g *GameEngine) PlayScenario(moves []models.Coord) {
 		}
 
 		snake.Move(move1)
+
+		if !snake.Died {
+			aliveSnakes += 1
+		}
 	}
 
 	// You have to wait for all the turns before handling
 	// dead snakes.
-
+	snakes := make([]Snake, aliveSnakes)
+	i := 0
+	for j, snake := range g.Snakes {
+		if snake.Died {
+			if j != g.YouIndex {
+				continue
+			}
+			fmt.Println("You died")
+		}
+		snakes[i] = snake
+		// Update your index
+		if j == g.YouIndex {
+			g.YouIndex = i
+		}
+		i += 1
+	}
+	g.Snakes = snakes
 }
 
-var Directions = [4]models.Coord{
-	{X: 0, Y: 1},  // up
-	{X: 0, Y: -1}, // down
-	{X: -1, Y: 0}, // left
-	{X: 1, Y: 0},  // right
+func (g *GameEngine) PlayRandomScenario() {
+	scenarios := g.GetAllScenarios()
+	index := rand.Intn(len(scenarios))
+	g.PlayScenario(scenarios[index])
 }
 
-// func (g *GameEngine) IdentifyMoves() [][]models.Coord {
-// 	moves := make([][]models.Coord, len(g.Snakes)*4)
-// 	for i := 0; i < len(g.Snakes); i++ {
-// 		snake := g.Snakes[i]
-// 		directions := snake.GetDirections()
-// 	}
+func (g *GameEngine) GetScenarios() ([][]models.Coord, []int) {
+	scenarios := make([][]models.Coord, len(g.Snakes))
+	lens := make([]int, len(g.Snakes))
+	for i := 0; i < len(g.Snakes); i++ {
+		head := g.Snakes[i].GetHead()
+		moves := make([]models.Coord, 0)
+		for _, direction := range Directions {
+			move := head.Add(direction)
+			// TODO(duncanwood): Check board is updated.. since blocked might be stale
+			if !g.Board.GetSquare(move).isBlocked {
+				moves = append(moves, head.Add(direction))
+			}
+		}
+		if len(moves) > 0 {
+			scenarios[i] = moves
+			lens[i] = len(moves)
+		} else {
+			// When no valid moves just pick up
+			scenarios[i] = []models.Coord{Directions[0]}
+			lens[i] = 1
+		}
 
-// 	for i := 0; i < len(g.Snakes) * 4; i++ {
+	}
+	return scenarios, lens
+}
 
-// 	}
-// }
+func (g *GameEngine) GetAllScenarios() [][]models.Coord {
+	scenarios, lens := g.GetScenarios()
+	// Note: update Permutations to assume >=1 lens
+	perms := permutations.Permutations(lens)
+	moves := make([][]models.Coord, len(perms))
+	for i, indexes := range perms {
+		moves[i] = make([]models.Coord, len(indexes))
+		for j := 0; j < len(indexes); j++ {
+			moves[i][j] = scenarios[j][indexes[j]]
+		}
+	}
+	return moves
+}
+
+/* Scoring */
+
+type ScoredSquare struct {
+	BlockedUtilTurn int
+}
+type ScoredBoard struct {
+	board [11][11]ScoredSquare
+}
+
+func (s *ScoredBoard) GetSquare(coord models.Coord) *ScoredSquare {
+	return &s.board[coord.X][coord.Y]
+}
+
+func (g *GameEngine) Score() float32 {
+	if g.Snakes[g.YouIndex].Died {
+		return -1.0
+	}
+	scoredBoard := ScoredBoard{}
+	// add snakes to board
+
+	// Keep score of squares
+	snakeSquares := make([]int, len(g.Snakes))
+
+	for turn := 0; turn < 121; turn++ {
+		for i, snake := range g.Snakes {
+			head := snake.GetHead()
+			for _, dir := range Directions {
+				coord := head.Add(dir)
+				sq := scoredBoard.GetSquare(coord)
+				if turn <= sq.BlockedUtilTurn {
+					// square blocked
+					continue
+				}
+				sq.BlockedUtilTurn = turn + len(snake.Body)
+				snakeSquares[i] += 1
+			}
+		}
+	}
+	return 0.0
+}
