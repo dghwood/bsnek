@@ -16,6 +16,7 @@ func TestMove(t *testing.T) {
 					{X: 1, Y: 0},
 					{X: 2, Y: 0},
 				},
+				Health: 100,
 			},
 			{
 				Body: []models.Coord{
@@ -23,6 +24,7 @@ func TestMove(t *testing.T) {
 					{X: 9, Y: 0},
 					{X: 8, Y: 0},
 				},
+				Health: 100,
 			},
 		},
 	}
@@ -102,7 +104,6 @@ func TestGetAllScenarios(t *testing.T) {
 			},
 		},
 	}
-	// scenarios, lens := game.GetScenarios()
 	moves := game.GetAllScenarios()
 	e := [][]models.Coord{
 		{{X: 0, Y: 1}, {X: 0, Y: 6}},
@@ -113,7 +114,6 @@ func TestGetAllScenarios(t *testing.T) {
 		{{X: 1, Y: 0}, {X: 0, Y: 4}},
 		{{X: 1, Y: 0}, {X: 1, Y: 5}},
 	}
-
 	if len(moves) != len(e) {
 		t.Fatalf("Moves are not the expected length: actual %d, expected: %d", len(moves), len(e))
 	}
@@ -227,7 +227,9 @@ func TestUtilExample(t *testing.T) {
 	x x x x x x x x x x x
 	x x x x x x x x x x x
 	`
-	game := GameEngineFromString(board)
+	state := GameStateFromString(board)
+	game := GameEngine{}
+	game.Init(state)
 	for i := 0; i < 10; i++ {
 		game.PlayRandomScenario()
 		fmt.Println(GameBoardToString(game))

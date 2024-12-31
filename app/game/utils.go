@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/dghwood/bsnek/models"
@@ -30,8 +31,9 @@ GameEngineFromString
 	x x x x x x x x x x x
 	`
 */
-func GameEngineFromString(board string) GameEngine {
-	game := GameEngine{}
+func GameStateFromString(board string) models.GameState {
+	game := models.GameState{Turn: 0}
+	game.You.ID = "0"
 	ylines := strings.Split(strings.TrimSpace(board), "\n")
 	// Find snakes
 	snakes := make([][]models.Coord, 4)
@@ -41,18 +43,16 @@ func GameEngineFromString(board string) GameEngine {
 		for x := 0; x < len(xchars); x++ {
 			letter := xchars[x]
 			coord := models.Coord{X: x, Y: y}
-			sq := game.Board.GetSquare(coord)
 			if letter == "x" {
 				continue
-			}
-			if letter == "F" {
-				sq.HasFood = true
+			} else if letter == "F" {
+				game.Board.Food = append(game.Board.Food, coord)
+				continue
+			} else if letter == "H" {
+				game.Board.Hazards = append(game.Board.Hazards, coord)
 				continue
 			}
-			if letter == "H" {
-				sq.HealthDeduction = 15
-				continue
-			}
+
 			for i, sLetter := range snakeLetters {
 				if strings.ToUpper(letter) == sLetter {
 					if i > numSnakes {
@@ -64,18 +64,17 @@ func GameEngineFromString(board string) GameEngine {
 					} else {
 						snakes[i] = append(snakes[i], coord)
 					}
-					game.Board.GetSquare(coord).isBlocked = true
 					break
 				}
 			}
 		}
 	}
 
-	game.Snakes = make([]Snake, numSnakes+1)
+	game.Board.Snakes = make([]models.Battlesnake, numSnakes+1)
 	for i, snake := range snakes[:numSnakes+1] {
-		game.Snakes[i] = Snake{
+		game.Board.Snakes[i] = models.Battlesnake{
 			Health: 100,
-			Index:  i,
+			ID:     fmt.Sprintf("%d", i),
 			Body:   constructSnake(snake)[0],
 		}
 	}

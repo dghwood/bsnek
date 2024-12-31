@@ -6,7 +6,6 @@ This is basically a game engine for BattleSnake
 */
 
 import (
-	"fmt"
 	"math/rand"
 
 	"github.com/dghwood/bsnek/models"
@@ -46,17 +45,22 @@ func (g *GameEngine) Copy() GameEngine {
 }
 
 func (g *GameEngine) Init(state models.GameState) {
+	// Add Turn
+	turn := state.Turn
+	g.Board.Turn = turn
+
 	// Add Snakes
 	g.Snakes = make([]Snake, len(state.Board.Snakes))
 	for i, snake := range state.Board.Snakes {
 		g.Snakes[i] = Snake{
-			Body:   snake.Body,
+			Body:   snake.Body, // Copy?
 			Health: snake.Health,
 			Index:  i,
 		}
-		for _, coord := range snake.Body[:len(snake.Body)-1] {
-			// Don't add the tail
-			g.Board.GetSquare(coord).isBlocked = true
+		for j, coord := range snake.Body[:len(snake.Body)-1] {
+			// Don't add the tail, or do this in reverse
+			// Since snake tails can overlap
+			g.Board.SetBlockedUntil(coord, len(snake.Body), j)
 		}
 		// Find your index
 		if state.You.ID == snake.ID {
@@ -93,10 +97,9 @@ func (g *GameEngine) handleHead2HeadCollision(snake1, snake2 *Snake) {
 }
 
 func (g *GameEngine) PlayScenario(moves []models.Coord) {
-	// FYI: Moves are indexed by snake
-	g.MoveNum += 1
+	deadIndex := make([]int, 0)
+	aliveIndex := make([]int, 0)
 
-	aliveSnakes := 0
 	for i := 0; i < len(moves); i++ {
 		move1 := moves[i]
 		snake := &g.Snakes[i]
@@ -110,13 +113,12 @@ func (g *GameEngine) PlayScenario(moves []models.Coord) {
 			}
 		}
 
-		sq := g.Board.GetSquare(move1)
-
 		// Check other collisons
-		if sq.isBlocked {
+		if g.Board.IsBlocked(move1) {
 			snake.Died = true
 		}
 
+		sq := g.Board.GetSquare(move1)
 		// Assign Food
 		if sq.HasFood {
 			sq.HasFood = false
@@ -129,32 +131,26 @@ func (g *GameEngine) PlayScenario(moves []models.Coord) {
 			snake.Died = true
 		}
 
-		snake.Move(move1)
-
-		if !snake.Died {
-			aliveSnakes += 1
-		}
-	}
-
-	// You have to wait for all the turns before handling
-	// dead snakes.
-	snakes := make([]Snake, aliveSnakes)
-	i := 0
-	for j, snake := range g.Snakes {
 		if snake.Died {
-			if j != g.YouIndex {
-				continue
-			}
-			fmt.Println("You died")
+			deadIndex = append(deadIndex, i)
+		} else {
+			aliveIndex = append(aliveIndex, i)
 		}
-		snakes[i] = snake
-		// Update your index
-		if j == g.YouIndex {
-			g.YouIndex = i
-		}
-		i += 1
 	}
-	g.Snakes = snakes
+
+	// Now move snakes
+	for _, i := range deadIndex {
+		// Dead first, so for h2h collisions you overwrite the blockedUtilTurn
+		snake := g.Snakes[i]
+		for _, body := range snake.Body {
+			g.Board.GetSquare(body).BlockedUtilTurn = g.Board.Turn
+		}
+	}
+	for _, i := range aliveIndex {
+		move := moves[i]
+		g.Snakes[i].Move(move)
+		g.Board.SetBlockedUntil(move, len(g.Snakes[i].Body), 0)
+	}
 }
 
 func (g *GameEngine) PlayRandomScenario() {
@@ -172,7 +168,7 @@ func (g *GameEngine) GetScenarios() ([][]models.Coord, []int) {
 		for _, direction := range Directions {
 			move := head.Add(direction)
 			// TODO(duncanwood): Check board is updated.. since blocked might be stale
-			if !g.Board.GetSquare(move).isBlocked {
+			if !g.Board.IsBlocked(move) {
 				moves = append(moves, head.Add(direction))
 			}
 		}
