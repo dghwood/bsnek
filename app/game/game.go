@@ -123,6 +123,10 @@ func (g *GameEngine) PlayScenario(moves []models.Coord) {
 		if sq.HasFood {
 			sq.HasFood = false
 			snake.Eat()
+			// Need to update the BlockedUtil
+			for j, body := range snake.Body[:len(snake.Body)-1] {
+				g.Board.SetBlockedUntil(body, len(snake.Body), j)
+			}
 		}
 
 		// Check Health

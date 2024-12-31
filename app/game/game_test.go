@@ -83,6 +83,11 @@ func TestEat(t *testing.T) {
 			t.Fatal("Snake Body moved incorrectly", body, expectedBody[i])
 		}
 	}
+	// Checked blocked until
+	if game.Board.GetSquare(move).BlockedUtilTurn != 3 {
+		t.Fatalf("Blocked Board not updated expected: 3, actual: %d",
+			game.Board.GetSquare(move).BlockedUtilTurn)
+	}
 }
 
 func TestGetAllScenarios(t *testing.T) {
