@@ -57,11 +57,7 @@ func (g *GameEngine) Init(state models.GameState) {
 			Health: snake.Health,
 			Index:  i,
 		}
-		for j, coord := range snake.Body[:len(snake.Body)-1] {
-			// Don't add the tail, or do this in reverse
-			// Since snake tails can overlap
-			g.Board.SetBlockedUntil(coord, len(snake.Body), j)
-		}
+		g.Board.SetBlockedUntilForSnake(g.Snakes[i])
 		// Find your index
 		if state.You.ID == snake.ID {
 			g.YouIndex = i
@@ -124,9 +120,7 @@ func (g *GameEngine) PlayScenario(moves []models.Coord) {
 			sq.HasFood = false
 			snake.Eat()
 			// Need to update the BlockedUtil
-			for j, body := range snake.Body[:len(snake.Body)-1] {
-				g.Board.SetBlockedUntil(body, len(snake.Body), j)
-			}
+			g.Board.SetBlockedUntilForSnake(*snake)
 		}
 
 		// Check Health

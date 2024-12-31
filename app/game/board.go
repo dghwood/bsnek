@@ -41,3 +41,11 @@ func (b *GameBoard) SetBlockedUntil(coord models.Coord, snakeLength int, bodyInd
 	// snakeLength - 1 == bodyIndex
 	b.GetSquare(coord).BlockedUtilTurn = b.Turn + snakeLength - 1 - bodyIndex
 }
+
+func (b *GameBoard) SetBlockedUntilForSnake(snake Snake) {
+	l := len(snake.Body)
+	for i, body := range snake.Body[:l-1] {
+		// Don't set the tail, since it can be double counted when eating
+		b.SetBlockedUntil(body, l, i)
+	}
+}
